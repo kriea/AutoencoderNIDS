@@ -12,21 +12,29 @@ def load_data(file_path):
 
 # Preprocess data
 def preprocess_data(df):
-    # Select relevant columns (based on KDD feature names)
-    numerical_features = [0, 4, 5]  # Example numerical columns
-    categorical_features = [1, 2, 3]  # Example categorical columns
+    # Step 1: Filter 'normal.' labeled data
+    normal_data = df[df[len(df.columns) - 1] == 'normal.'].copy()  # Assuming label is in the last column
     
-    # Scale numerical features
+    # Categorical columns
+    categorical_features = [1, 2, 3]  # Protocol type, Service, Flag (0-based indexing)
+    
+    # Numerical columns (all other columns except the label)
+    numerical_features = list(set(df.columns) - set(categorical_features) - {len(df.columns) - 1})
+    
+    # Step 2: Standardize numerical features
     scaler = StandardScaler()
-    df[numerical_features] = scaler.fit_transform(df[numerical_features])
-
-    # One-hot encode categorical features
-    encoder = OneHotEncoder(sparse=False)
-    encoded_features = encoder.fit_transform(df[categorical_features])
+    normal_data[numerical_features] = scaler.fit_transform(normal_data[numerical_features])
     
-    # Combine processed numerical and encoded features
-    df_encoded = pd.DataFrame(encoded_features)
-    df_processed = pd.concat([df.drop(categorical_features, axis=1), df_encoded], axis=1)
+    # Step 3: One-hot encode categorical features
+    encoder = OneHotEncoder(sparse=False)
+    encoded_categorical = encoder.fit_transform(normal_data[categorical_features])
+    
+    # Step 4: Drop the label column for training
+    normal_data = normal_data.drop(columns=[len(normal_data.columns) - 1])
+    
+    # Step 5: Combine processed numerical and encoded categorical data
+    df_encoded_categorical = pd.DataFrame(encoded_categorical)
+    df_processed = pd.concat([normal_data.reset_index(drop=True), df_encoded_categorical], axis=1)
     
     return df_processed
 
